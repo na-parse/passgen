@@ -73,5 +73,10 @@ export function generatePassword(config: PasswordConfig): string {
     [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
   }
 
+  while (config.useSymbols.includes(passwordChars[0])) {
+    const j = Math.floor(Math.random() * (passwordChars.length - 1)) + 1;
+    [passwordChars[0], passwordChars[j]] = [passwordChars[j], passwordChars[0]];
+  }
+
   return passwordChars.join("");
 }
