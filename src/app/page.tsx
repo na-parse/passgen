@@ -9,7 +9,7 @@ export default function Home() {
 
   const config: PasswordConfig = {
     length: 36,
-    upper: [10, null],
+    upper: [8, null],
     lower: [8, null],
     digits: [6, null],
     symbols: [6, 10],
