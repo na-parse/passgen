@@ -8,7 +8,7 @@ export default function Home() {
   const [showCopied, setShowCopied] = useState(false);
 
   const config: PasswordConfig = {
-    length: 36,
+    length: 40,
     upper: [8, null],
     lower: [8, null],
     digits: [6, null],
