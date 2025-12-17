@@ -13,7 +13,7 @@ const DEFAULT_CONFIG: PasswordConfig = {
 };
 
 function validateConfig(config: PasswordConfig): string | null {
-  if (config.length < 1) return "Length must be at least 1";
+  if (config.length < 10) return "Length must be at least 10";
 
   const mins = [
     config.upper[0],
@@ -26,7 +26,7 @@ function validateConfig(config: PasswordConfig): string | null {
 
   const totalMin = mins.reduce((sum, m) => sum + m, 0);
   if (totalMin > config.length) {
-    return `Minimum requirements (${totalMin}) exceed password length (${config.length})`;
+    return `Minimum required characters (${totalMin}) exceed password length (${config.length}). Reduce character requirements or increase length.`;
   }
 
   const checks = [
@@ -193,7 +193,7 @@ export default function Home() {
             <div
               key={idx}
               onClick={() => handleCopy(pwd)}
-              className="p-5 bg-gray-800 border border-gray-700 rounded-lg font-mono text-lg text-orange-300 shadow-md cursor-pointer hover:bg-gray-750 hover:border-orange-500 transition-all"
+              className="p-5 bg-gray-800 border border-gray-700 rounded-lg font-mono text-lg text-orange-300 shadow-md cursor-pointer hover:bg-gray-750 hover:border-orange-500 transition-all overflow-x-auto whitespace-nowrap"
             >
               {pwd}
             </div>
@@ -244,13 +244,13 @@ export default function Home() {
             </div>
             <input
               type="range"
-              min="1"
+              min="10"
               max="64"
               value={config.length}
               onChange={(e) =>
                 updateConfig({
                   ...config,
-                  length: parseInt(e.target.value) || 1,
+                  length: parseInt(e.target.value) || 10,
                 })
               }
               className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
@@ -439,8 +439,14 @@ export default function Home() {
           </div>
 
           <button
+            onClick={() => setIsDrawerOpen(false)}
+            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-gray-900 px-4 py-3 rounded transition-all text-sm font-semibold mt-6"
+          >
+            Accept
+          </button>
+          <button
             onClick={handleReset}
-            className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded transition-all text-sm font-semibold mt-6"
+            className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded transition-all text-sm font-semibold mt-3"
           >
             Reset to Defaults
           </button>
