@@ -32,10 +32,12 @@ function validateRules(rules: PassRule[], length: number): void {
 }
 
 function getRandomChar(charset: string): string {
-  return charset[Math.floor(Math.random() * charset.length)];
+  const randomBytes = new Uint8Array(1);
+  crypto.getRandomValues(randomBytes);
+  return charset[randomBytes[0] % charset.length];
 }
 
-export function generatePassword(config: PasswordConfig): string {
+function generatePasswordUnconstrained(config: PasswordConfig): string {
   const rules = [
     createRule("Upper", config.upper[0], config.upper[1], "ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
     createRule("Lower", config.lower[0], config.lower[1], "abcdefghijklmnopqrstuvwxyz"),
@@ -73,10 +75,13 @@ export function generatePassword(config: PasswordConfig): string {
     [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
   }
 
-  while (config.useSymbols.includes(passwordChars[0])) {
-    const j = Math.floor(Math.random() * (passwordChars.length - 1)) + 1;
-    [passwordChars[0], passwordChars[j]] = [passwordChars[j], passwordChars[0]];
-  }
-
   return passwordChars.join("");
+}
+
+export function generatePassword(config: PasswordConfig): string {
+  let password: string;
+  do {
+    password = generatePasswordUnconstrained(config);
+  } while (config.useSymbols.includes(password[0]));
+  return password;
 }

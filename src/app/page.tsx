@@ -3,13 +3,16 @@
 import { useState, useEffect } from "react";
 import { generatePassword, PasswordConfig } from "@/lib/passwordGenerator";
 
+const PASSGEN_SAFESET = "!@#$%&_.,{}[]/";
+const OWASP_SAFESET = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
 const DEFAULT_CONFIG: PasswordConfig = {
   length: 40,
   upper: [8, null],
   lower: [8, null],
   digits: [6, null],
   symbols: [6, 10],
-  useSymbols: "!@#$%&_.,{}[]/",
+  useSymbols: PASSGEN_SAFESET,
 };
 
 function validateConfig(config: PasswordConfig): string | null {
@@ -46,6 +49,12 @@ function validateConfig(config: PasswordConfig): string | null {
     return "Symbol charset cannot be empty";
   }
 
+  for (const char of config.useSymbols) {
+    if (!OWASP_SAFESET.includes(char)) {
+      return `Symbol charset contains invalid character: "${char}". Only OWASP-safe characters are allowed.`;
+    }
+  }
+
   return null;
 }
 
@@ -55,6 +64,7 @@ export default function Home() {
   const [showCopied, setShowCopied] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("passgen-config");
@@ -120,7 +130,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[rgb(33,33,49)] p-8">
-      <div className="max-w-2xl w-full mx-auto pt-8 pb-16">
+      <div className="max-w-2xl w-full mx-auto pt-8 pb-48">
         <h1 className="text-5xl font-bold mb-6 text-center bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent pb-2">
           na-parse / passgen
         </h1>
@@ -170,7 +180,7 @@ export default function Home() {
             </li>
           </ul>
         </div>
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center gap-4 mb-8">
           <button
             onClick={handleGenerate}
             disabled={validationError !== null}
@@ -181,6 +191,17 @@ export default function Home() {
             }`}
           >
             Generate Password
+          </button>
+          <button
+            onClick={() => setPasswords([])}
+            disabled={passwords.length === 0}
+            className={`font-semibold px-8 py-4 rounded-lg shadow-lg transition-all text-lg border-2 ${
+              passwords.length === 0
+                ? "bg-gray-900 text-gray-500 border-gray-600 cursor-not-allowed"
+                : "bg-black text-yellow-400 border-yellow-400 hover:bg-gray-900 hover:shadow-xl"
+            }`}
+          >
+            Clear
           </button>
         </div>
         {showCopied && (
@@ -434,8 +455,37 @@ export default function Home() {
                   useSymbols: e.target.value,
                 })
               }
-              className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-300 w-full focus:border-orange-500 focus:outline-none font-mono text-sm"
+              className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-gray-300 w-full focus:border-orange-500 focus:outline-none font-mono text-sm mb-3"
             />
+            <div className="space-y-2 text-xs text-gray-400">
+              <div
+                onClick={() => updateConfig({ ...config, useSymbols: PASSGEN_SAFESET })}
+                className="flex items-center gap-2 cursor-pointer hover:text-gray-300 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={config.useSymbols === PASSGEN_SAFESET}
+                  onChange={() => updateConfig({ ...config, useSymbols: PASSGEN_SAFESET })}
+                  className="cursor-pointer"
+                />
+                <span>Passgen SafeSet (default)</span>
+              </div>
+              <div
+                onClick={() => updateConfig({ ...config, useSymbols: OWASP_SAFESET })}
+                className="flex items-center gap-2 cursor-pointer hover:text-gray-300 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={config.useSymbols === OWASP_SAFESET}
+                  onChange={() => updateConfig({ ...config, useSymbols: OWASP_SAFESET })}
+                  className="cursor-pointer"
+                />
+                <span>OWASP Set (full standard)</span>
+              </div>
+              <div className="text-gray-500 pt-1">
+                ⓘ Only OWASP-safe characters accepted
+              </div>
+            </div>
           </div>
 
           <button
@@ -453,13 +503,23 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 py-3">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm text-gray-400">
-          <span><a href="https://github.com/na-parse/passgen"
-            >Simple secure password generator</a>
-          </span>
-          <div className="flex items-center gap-2">
-            <span>unit03:na-parse</span>
+      <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs text-gray-400 py-3">
+          <span><a href="https://github.com/na-parse/passgen" className="hover:text-orange-400 transition-colors">Simple secure password generator</a></span>
+          <span className="text-gray-500">unit03:na-parse • MIT License</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setExpandedPolicy(expandedPolicy === "privacy" ? null : "privacy")}
+              className="hover:text-orange-400 transition-colors"
+            >
+              Privacy {expandedPolicy === "privacy" ? "▼" : "▶"}
+            </button>
+            <button
+              onClick={() => setExpandedPolicy(expandedPolicy === "terms" ? null : "terms")}
+              className="hover:text-orange-400 transition-colors"
+            >
+              Terms {expandedPolicy === "terms" ? "▼" : "▶"}
+            </button>
             <a
               href="https://github.com/na-parse"
               target="_blank"
@@ -467,7 +527,7 @@ export default function Home() {
               className="hover:text-orange-400 transition-colors"
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -476,6 +536,30 @@ export default function Home() {
             </a>
           </div>
         </div>
+
+        {expandedPolicy === "privacy" && (
+          <div className="px-4 py-3 bg-gray-900 text-xs text-gray-300 space-y-2 max-h-40 overflow-y-auto border-t border-gray-700">
+            <h3 className="font-semibold text-orange-400">Privacy Policy</h3>
+            <p><strong>Open Source:</strong> This application is open source and publicly available on GitHub under the MIT License. You can review the code, fork it, and modify it as needed.</p>
+            <p><strong>Client-Side Generation:</strong> All passwords are generated entirely in your browser using the Web Cryptography API. No passwords are transmitted to any server, stored remotely, or processed by third parties.</p>
+            <p><strong>Configuration Storage:</strong> Your password generation settings are stored only in your browser's localStorage. This data remains on your device and is never transmitted to any server.</p>
+            <p><strong>Zero Tracking:</strong> This application contains no analytics, tracking pixels, cookies, or telemetry. We have no mechanism to identify you or track what you do with this tool.</p>
+            <p><strong>External Resources:</strong> This app loads fonts from Google Fonts. Review Google's privacy policy regarding their font services.</p>
+            <p><strong>Your Security Responsibility:</strong> Back up generated passwords to your password manager immediately. Clear your browser history/cache if needed. Your security depends on your device and browser security.</p>
+          </div>
+        )}
+
+        {expandedPolicy === "terms" && (
+          <div className="px-4 py-3 bg-gray-900 text-xs text-gray-300 space-y-2 max-h-40 overflow-y-auto border-t border-gray-700">
+            <h3 className="font-semibold text-orange-400">Terms of Service</h3>
+            <p><strong>MIT License:</strong> This software is licensed under the MIT License. View the full license on GitHub. You are free to use, modify, fork, and distribute this code under the MIT terms.</p>
+            <p><strong>As-Is Disclaimer:</strong> This application is provided "as-is" without warranty of any kind, express or implied. We implement industry-standard cryptographic practices, but make no guarantees about password strength, randomness quality, or security.</p>
+            <p><strong>No Liability:</strong> We are not liable for any damages, data loss, security breaches, or access loss resulting from your use of this application. You assume all risk when using this tool.</p>
+            <p><strong>Your Responsibility:</strong> You are responsible for managing and securing generated passwords. Immediately save passwords to your password manager. We have no ability to recover lost passwords.</p>
+            <p><strong>Ethical Use:</strong> Use this tool only for legitimate password generation. Do not use it for unauthorized access, system abuse, or any malicious purpose.</p>
+            <p><strong>Security Disclosure:</strong> If you discover a security vulnerability, please report it responsibly to the maintainers on GitHub rather than public disclosure.</p>
+          </div>
+        )}
       </footer>      
     </main>
   );

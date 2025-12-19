@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 .claude
+CLAUDE.md
+SECURITY_AUDIT.md
 
 # debug
 npm-debug.log*
