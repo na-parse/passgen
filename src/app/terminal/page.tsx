@@ -70,7 +70,7 @@ export default function CRTv2Design() {
   const [cursorOn, setCursorOn] = useState(true);
   const [termLines, setTermLines] = useState<Array<{ text: string; type: 'system' | 'cmd' | 'ok' | 'err' | 'data' | 'header' }>>([
     { text: "╔══════════════════════════════════════════════════════════╗", type: "header" },
-    { text: "║  PASSGEN v0.3.1 — Secure Password Generation             ║", type: "header" },
+    { text: "║  PASSGEN v0.3.2 — Secure Password Generation             ║", type: "header" },
     { text: "║  Cryptographic Credential Interface                      ║", type: "header" },
     { text: "║  na-parse // MIT License                                 ║", type: "header" },
     { text: "╚══════════════════════════════════════════════════════════╝", type: "header" },
