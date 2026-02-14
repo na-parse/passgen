@@ -55,11 +55,6 @@ function copyToClipboard(text: string): Promise<void> {
   });
 }
 
-function timestamp(): string {
-  const d = new Date();
-  return d.toTimeString().split(" ")[0];
-}
-
 export default function CRTv2Design() {
   const [config, setConfigState] = useState<PasswordConfig>(DEFAULT_CONFIG);
   const [passwords, setPasswords] = useState<string[]>([]);
@@ -67,20 +62,6 @@ export default function CRTv2Design() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
-  const [cursorOn, setCursorOn] = useState(true);
-  const [termLines, setTermLines] = useState<Array<{ text: string; type: 'system' | 'cmd' | 'ok' | 'err' | 'data' | 'header' }>>([
-    { text: "╔══════════════════════════════════════════════════════════╗", type: "header" },
-    { text: "║  PASSGEN v0.3.1 — Secure Password Generation             ║", type: "header" },
-    { text: "║  Cryptographic Credential Interface                      ║", type: "header" },
-    { text: "║  na-parse // MIT License                                 ║", type: "header" },
-    { text: "╚══════════════════════════════════════════════════════════╝", type: "header" },
-    { text: "", type: "system" },
-    { text: `[${timestamp()}] SYS: Neural interface online. Deck ready.`, type: "system" },
-    { text: `[${timestamp()}] SYS: Entropy source: crypto.getRandomValues()`, type: "system" },
-    { text: `[${timestamp()}] SYS: Shuffle algorithm: Fisher-Yates (unbiased)`, type: "system" },
-    { text: `[${timestamp()}] SYS: Awaiting commands, cowboy.`, type: "system" },
-    { text: "", type: "system" },
-  ]);
 
   useEffect(() => {
     const stored = localStorage.getItem("passgen-config");
@@ -91,9 +72,11 @@ export default function CRTv2Design() {
   }, []);
 
   useEffect(() => {
-    const iv = setInterval(() => setCursorOn((v) => !v), 500);
-    return () => clearInterval(iv);
-  }, []);
+    if (!showConfig) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowConfig(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showConfig]);
 
   const updateConfig = useCallback((newConfig: PasswordConfig) => {
     setConfigState(newConfig);
@@ -101,59 +84,18 @@ export default function CRTv2Design() {
     localStorage.setItem("passgen-config", JSON.stringify(newConfig));
   }, []);
 
-  const addLines = (...lines: Array<{ text: string; type: 'system' | 'cmd' | 'ok' | 'err' | 'data' | 'header' }>) => {
-    setTermLines((prev) => [...prev, ...lines]);
-  };
-
   const handleGenerate = () => {
-    const ts = timestamp();
-    if (validationError) {
-      addLines(
-        { text: `[${ts}] $ passgen --generate`, type: "cmd" },
-        { text: `[${ts}] ${validationError}`, type: "err" },
-        { text: "", type: "system" },
-      );
-      return;
-    }
+    if (validationError) return;
     const pwd = generatePassword(config);
     setPasswords([pwd, ...passwords]);
-    addLines(
-      { text: `[${ts}] $ passgen --generate \\`, type: "cmd" },
-      { text: `         --length=${config.length} \\`, type: "data" },
-      { text: `         --upper=${config.upper[0]}${config.upper[1] !== null ? `,${config.upper[1]}` : ''} \\`, type: "data" },
-      { text: `         --lower=${config.lower[0]}${config.lower[1] !== null ? `,${config.lower[1]}` : ''} \\`, type: "data" },
-      { text: `         --digits=${config.digits[0]}${config.digits[1] !== null ? `,${config.digits[1]}` : ''} \\`, type: "data" },
-      { text: `         --symbols=${config.symbols[0]}${config.symbols[1] !== null ? `,${config.symbols[1]}` : ''} \\`, type: "data" },
-      { text: `         --charset="${config.useSymbols}"`, type: "data" },
-      { text: `[${ts}] OK: Password generated (${pwd.length} chars)`, type: "ok" },
-      { text: `[${ts}] >> ${pwd}`, type: "ok" },
-      { text: "", type: "system" },
-    );
   };
 
   const handleCopy = async (password: string) => {
     try {
       await copyToClipboard(password);
       setShowCopied(true);
-      const ts = timestamp();
-      addLines(
-        { text: `[${ts}] $ clipboard --write "${password.substring(0, 12)}..."`, type: "cmd" },
-        { text: `[${ts}] OK: ${password.length} bytes written to clipboard buffer.`, type: "ok" },
-        { text: "", type: "system" },
-      );
       setTimeout(() => setShowCopied(false), 2000);
     } catch { /* */ }
-  };
-
-  const lineColor = (type: string) => {
-    switch (type) {
-      case 'cmd': return '#00DDFF';
-      case 'ok': return '#00FF88';
-      case 'err': return '#FF4444';
-      case 'data': return '#00BB99';
-      case 'header': return '#FF8800';
-      default: return '#668877';
-    }
   };
 
   return (
@@ -234,54 +176,6 @@ export default function CRTv2Design() {
 
         .crt2-glow {
           text-shadow: 0 0 6px rgba(0,255,136,0.4);
-        }
-
-        .terminal-window {
-          background: var(--crt-panel);
-          border: 1px solid var(--crt-border);
-          border-radius: 4px;
-          overflow: hidden;
-          box-shadow: 0 0 30px rgba(0,255,136,0.03), inset 0 0 30px rgba(0,0,0,0.3);
-        }
-
-        .terminal-bar {
-          background: var(--crt-border);
-          padding: 6px 12px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          color: var(--crt-green-dim);
-        }
-
-        .terminal-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          border: 1px solid;
-        }
-
-        .terminal-log {
-          padding: 14px 16px;
-          max-height: 200px;
-          overflow-y: auto;
-          font-size: 14px;
-          line-height: 1.6;
-          white-space: pre;
-        }
-
-        .terminal-log::-webkit-scrollbar { width: 6px; }
-        .terminal-log::-webkit-scrollbar-track { background: var(--crt-bg); }
-        .terminal-log::-webkit-scrollbar-thumb { background: var(--crt-green-faint); border-radius: 3px; }
-
-        .cursor-block {
-          display: inline-block;
-          width: 9px;
-          height: 16px;
-          background: var(--crt-green);
-          vertical-align: text-bottom;
-          margin-left: 2px;
-          box-shadow: 0 0 6px rgba(0,255,136,0.5);
         }
 
         .crt2-btn {
@@ -377,12 +271,6 @@ export default function CRTv2Design() {
           box-shadow: 0 0 12px rgba(0,255,136,0.08);
         }
 
-        .config-crt2 {
-          background: var(--crt-panel);
-          border: 1px solid var(--crt-border);
-          border-radius: 4px;
-        }
-
         .crt2-label {
           font-family: 'Fira Code', monospace;
           font-weight: 500;
@@ -440,20 +328,60 @@ export default function CRTv2Design() {
           z-index: 100;
         }
 
-        .config-toggle-crt2 {
+        .config-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.75);
+          z-index: 90;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .config-modal {
+          background: var(--crt-panel);
+          border: 1px solid var(--crt-green-dim);
+          border-radius: 4px;
+          width: 100%;
+          max-width: 520px;
+          max-height: 80vh;
+          overflow-y: auto;
+          box-shadow: 0 0 40px rgba(0,255,136,0.08), 0 0 80px rgba(0,0,0,0.5);
+        }
+
+        .config-modal::-webkit-scrollbar { width: 6px; }
+        .config-modal::-webkit-scrollbar-track { background: var(--crt-bg); }
+        .config-modal::-webkit-scrollbar-thumb { background: var(--crt-green-faint); border-radius: 3px; }
+
+        .config-modal-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 16px;
-          cursor: pointer;
-          background: var(--crt-panel);
-          border: 1px solid var(--crt-border);
-          border-radius: 4px;
-          transition: border-color 0.2s;
+          padding: 14px 20px;
+          border-bottom: 1px solid var(--crt-border);
         }
 
-        .config-toggle-crt2:hover {
-          border-color: var(--crt-green-faint);
+        .config-close-btn {
+          background: none;
+          border: 1px solid var(--crt-green-faint);
+          color: var(--crt-green-dim);
+          font-family: 'Fira Code', monospace;
+          font-size: 16px;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          border-radius: 2px;
+          transition: all 0.2s;
+        }
+
+        .config-close-btn:hover {
+          color: var(--crt-red);
+          border-color: var(--crt-red);
+          background: rgba(255,68,68,0.1);
         }
 
         .crt2-chip {
@@ -476,24 +404,6 @@ export default function CRTv2Design() {
           color: var(--crt-green);
         }
 
-        .crt2-status-bar {
-          display: flex;
-          gap: 16px;
-          padding: 6px 12px;
-          font-size: 12px;
-          color: var(--crt-green-dim);
-          border-top: 1px solid var(--crt-border);
-          background: rgba(0,0,0,0.3);
-        }
-
-        .crt2-status-dot {
-          display: inline-block;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          margin-right: 4px;
-          vertical-align: middle;
-        }
       `}</style>
 
       <div className="crt2-body">
@@ -501,156 +411,21 @@ export default function CRTv2Design() {
 
           {/* Header */}
           <h1 className="crt2-title" style={{ marginBottom: 2 }}>PASSGEN</h1>
-          <p className="crt2-sub">secure password generation terminal</p>
+          <p className="crt2-sub">secure password generation</p>
 
           <div style={{ borderBottom: '1px solid var(--crt-border)', margin: '16px 0' }} />
-
-          {/* Terminal Window */}
-          <div className="terminal-window" style={{ marginBottom: 16 }}>
-            <div className="terminal-bar">
-              <span className="terminal-dot" style={{ borderColor: 'var(--crt-red)', background: 'rgba(255,68,68,0.6)' }} />
-              <span className="terminal-dot" style={{ borderColor: 'var(--crt-amber)', background: 'rgba(255,136,0,0.6)' }} />
-              <span className="terminal-dot" style={{ borderColor: 'var(--crt-green)', background: 'rgba(0,255,136,0.6)' }} />
-              <span style={{ marginLeft: 8 }}>passgen://terminal</span>
-            </div>
-            <div className="terminal-log">
-              {termLines.map((line, i) => (
-                <div key={i} style={{ color: lineColor(line.type), minHeight: line.text === '' ? 10 : undefined }}>
-                  {line.text}
-                </div>
-              ))}
-              <div style={{ color: 'var(--crt-green-dim)' }}>
-                $ <span className="cursor-block" style={{ opacity: cursorOn ? 1 : 0 }} />
-              </div>
-            </div>
-            <div className="crt2-status-bar">
-              <span><span className="crt2-status-dot" style={{ background: 'var(--crt-green)' }} />DECK ONLINE</span>
-              <span><span className="crt2-status-dot" style={{ background: 'var(--crt-cyan)' }} />ICE: NONE</span>
-              <span><span className="crt2-status-dot" style={{ background: 'var(--crt-amber)' }} />ENTROPY: HIGH</span>
-              <span style={{ marginLeft: 'auto' }}>PWD_COUNT: {passwords.length}</span>
-            </div>
-          </div>
-
-          {/* Config Toggle */}
-          <div
-            className="config-toggle-crt2"
-            onClick={() => setShowConfig(!showConfig)}
-            style={{ marginBottom: 12 }}
-          >
-            <div>
-              <div style={{ fontSize: 13, color: 'var(--crt-cyan)', marginBottom: 2, textShadow: '0 0 4px rgba(0,221,255,0.2)' }}>
-                // PARAMETERS
-              </div>
-              <div style={{ fontSize: 14, color: 'var(--crt-green-dim)' }}>
-                len={config.length} upper={config.upper[0]} lower={config.lower[0]} digits={config.digits[0]} sym={config.symbols[0]}
-              </div>
-            </div>
-            <span style={{
-              color: 'var(--crt-green-faint)', fontSize: 18,
-              transition: 'transform 0.2s', display: 'inline-block',
-              transform: showConfig ? 'rotate(180deg)' : 'none',
-            }}>&#9662;</span>
-          </div>
-
-          {/* Config Panel */}
-          {showConfig && (
-            <div className="config-crt2" style={{ padding: 20, marginBottom: 12 }}>
-              {validationError && (
-                <div style={{
-                  borderLeft: '3px solid var(--crt-red)',
-                  padding: '8px 12px',
-                  color: 'var(--crt-red)',
-                  fontSize: 14,
-                  marginBottom: 14,
-                  background: 'rgba(255,68,68,0.05)',
-                  textShadow: '0 0 4px rgba(255,68,68,0.3)',
-                }}>
-                  {validationError}
-                </div>
-              )}
-
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                  <span className="crt2-label" style={{ marginBottom: 0 }}>--length</span>
-                  <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700, color: 'var(--crt-green)', textShadow: '0 0 8px rgba(0,255,136,0.4)' }}>{config.length}</span>
-                </div>
-                <input type="range" min="10" max="64" value={config.length}
-                  onChange={(e) => updateConfig({ ...config, length: parseInt(e.target.value) || 10 })}
-                  className="crt2-range"
-                />
-              </div>
-
-              {[
-                { label: '--upper', key: 'upper' as const },
-                { label: '--lower', key: 'lower' as const },
-                { label: '--digits', key: 'digits' as const },
-                { label: '--symbols', key: 'symbols' as const },
-              ].map(({ label, key }) => (
-                <div key={key} style={{ marginBottom: 14 }}>
-                  <span className="crt2-label">{label}</span>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>min</div>
-                      <input type="number" min="0" value={config[key][0]}
-                        onChange={(e) => updateConfig({ ...config, [key]: [parseInt(e.target.value) || 0, config[key][1]] })}
-                        className="crt2-input"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>max</div>
-                      <input type="number" min="0" value={config[key][1] ?? ""} placeholder="null"
-                        onChange={(e) => updateConfig({ ...config, [key]: [config[key][0], e.target.value === "" ? null : parseInt(e.target.value)] })}
-                        className="crt2-input"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div style={{ borderBottom: '1px solid var(--crt-border)', margin: '10px 0' }} />
-
-              <div style={{ marginBottom: 16 }}>
-                <span className="crt2-label">--charset</span>
-                <input type="text" value={config.useSymbols}
-                  onChange={(e) => updateConfig({ ...config, useSymbols: e.target.value })}
-                  className="crt2-input" style={{ marginBottom: 8 }}
-                />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => updateConfig({ ...config, useSymbols: PASSGEN_SAFESET })}
-                    className={`crt2-chip ${config.useSymbols === PASSGEN_SAFESET ? 'crt2-chip-active' : ''}`}>
-                    SafeSet
-                  </button>
-                  <button onClick={() => updateConfig({ ...config, useSymbols: OWASP_SAFESET })}
-                    className={`crt2-chip ${config.useSymbols === OWASP_SAFESET ? 'crt2-chip-active' : ''}`}>
-                    OWASP
-                  </button>
-                </div>
-              </div>
-
-              <button onClick={() => {
-                updateConfig(DEFAULT_CONFIG);
-                addLines({ text: `[${timestamp()}] SYS: Parameters reset to factory defaults.`, type: "system" });
-              }}
-                className="crt2-btn" style={{ width: '100%', fontSize: 12, padding: '8px', letterSpacing: '0.08em' }}>
-                RESET DEFAULTS
-              </button>
-            </div>
-          )}
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             <button onClick={handleGenerate} disabled={validationError !== null}
               className="crt2-btn" style={{ flex: 1, padding: '16px 24px' }}>
-              EXEC.passgen()
+              GENERATE()
             </button>
-            <button onClick={() => {
-              setPasswords([]);
-              addLines(
-                { text: `[${timestamp()}] $ flush --history`, type: "cmd" },
-                { text: `[${timestamp()}] OK: Password history flushed.`, type: "ok" },
-                { text: "", type: "system" },
-              );
-            }} disabled={passwords.length === 0}
+            <button onClick={() => setShowConfig(true)}
+              className="crt2-btn" style={{ padding: '16px 20px' }}>
+              CONFIG
+            </button>
+            <button onClick={() => setPasswords([])} disabled={passwords.length === 0}
               className="crt2-btn crt2-btn-red" style={{ padding: '16px 20px' }}>
               FLUSH
             </button>
@@ -673,9 +448,9 @@ export default function CRTv2Design() {
                 execute locally in your browser. No data is transmitted.
               </p>
               <p>
-                Click <span style={{ color: 'var(--crt-green)' }}>EXEC.passgen()</span> to generate a password.
-                Click any output to copy to your clipboard. Configure parameters in the settings panel.
-                The terminal logs every operation for your review.
+                Click <span style={{ color: 'var(--crt-green)' }}>GENERATE()</span> to generate a password.
+                Click any output to copy to your clipboard. Adjust parameters via <span style={{ color: 'var(--crt-green)' }}>CONFIG</span>.
+                Use <span style={{ color: 'var(--crt-red)' }}>FLUSH</span> to clear all generated passwords from memory.
               </p>
             </div>
           )}
@@ -695,6 +470,100 @@ export default function CRTv2Design() {
             ))}
           </div>
         </div>
+
+        {/* Config Modal */}
+        {showConfig && (
+          <div className="config-overlay" onClick={() => setShowConfig(false)}>
+            <div className="config-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="config-modal-header">
+                <span style={{ fontSize: 13, color: 'var(--crt-cyan)', textShadow: '0 0 4px rgba(0,221,255,0.2)' }}>
+                  // PARAMETERS
+                </span>
+                <button className="config-close-btn" onClick={() => setShowConfig(false)}>
+                  &#10005;
+                </button>
+              </div>
+              <div style={{ padding: 20 }}>
+                {validationError && (
+                  <div style={{
+                    borderLeft: '3px solid var(--crt-red)',
+                    padding: '8px 12px',
+                    color: 'var(--crt-red)',
+                    fontSize: 14,
+                    marginBottom: 14,
+                    background: 'rgba(255,68,68,0.05)',
+                    textShadow: '0 0 4px rgba(255,68,68,0.3)',
+                  }}>
+                    {validationError}
+                  </div>
+                )}
+
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                    <span className="crt2-label" style={{ marginBottom: 0 }}>--length</span>
+                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700, color: 'var(--crt-green)', textShadow: '0 0 8px rgba(0,255,136,0.4)' }}>{config.length}</span>
+                  </div>
+                  <input type="range" min="10" max="64" value={config.length}
+                    onChange={(e) => updateConfig({ ...config, length: parseInt(e.target.value) || 10 })}
+                    className="crt2-range"
+                  />
+                </div>
+
+                {[
+                  { label: '--upper', key: 'upper' as const },
+                  { label: '--lower', key: 'lower' as const },
+                  { label: '--digits', key: 'digits' as const },
+                  { label: '--symbols', key: 'symbols' as const },
+                ].map(({ label, key }) => (
+                  <div key={key} style={{ marginBottom: 14 }}>
+                    <span className="crt2-label">{label}</span>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>min</div>
+                        <input type="number" min="0" value={config[key][0]}
+                          onChange={(e) => updateConfig({ ...config, [key]: [parseInt(e.target.value) || 0, config[key][1]] })}
+                          className="crt2-input"
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>max</div>
+                        <input type="number" min="0" value={config[key][1] ?? ""} placeholder="null"
+                          onChange={(e) => updateConfig({ ...config, [key]: [config[key][0], e.target.value === "" ? null : parseInt(e.target.value)] })}
+                          className="crt2-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ borderBottom: '1px solid var(--crt-border)', margin: '10px 0' }} />
+
+                <div style={{ marginBottom: 16 }}>
+                  <span className="crt2-label">--charset</span>
+                  <input type="text" value={config.useSymbols}
+                    onChange={(e) => updateConfig({ ...config, useSymbols: e.target.value })}
+                    className="crt2-input" style={{ marginBottom: 8 }}
+                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => updateConfig({ ...config, useSymbols: PASSGEN_SAFESET })}
+                      className={`crt2-chip ${config.useSymbols === PASSGEN_SAFESET ? 'crt2-chip-active' : ''}`}>
+                      SafeSet
+                    </button>
+                    <button onClick={() => updateConfig({ ...config, useSymbols: OWASP_SAFESET })}
+                      className={`crt2-chip ${config.useSymbols === OWASP_SAFESET ? 'crt2-chip-active' : ''}`}>
+                      OWASP
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={() => updateConfig(DEFAULT_CONFIG)}
+                  className="crt2-btn" style={{ width: '100%', fontSize: 12, padding: '8px', letterSpacing: '0.08em' }}>
+                  RESET DEFAULTS
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toast */}
         {showCopied && (
