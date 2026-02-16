@@ -1,4 +1,4 @@
-export interface PassRule {
+interface PassRule {
   name: string;
   minChars: number;
   maxChars: number | null;

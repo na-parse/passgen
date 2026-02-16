@@ -55,13 +55,15 @@ function copyToClipboard(text: string): Promise<void> {
   });
 }
 
-export default function CRTv2Design() {
+export default function PassgenPage() {
   const [config, setConfigState] = useState<PasswordConfig>(DEFAULT_CONFIG);
   const [passwords, setPasswords] = useState<string[]>([]);
   const [showCopied, setShowCopied] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("passgen-config");
@@ -69,6 +71,9 @@ export default function CRTv2Design() {
       try { setConfigState(JSON.parse(stored) as PasswordConfig); }
       catch { setConfigState(DEFAULT_CONFIG); }
     }
+    const storedTheme = localStorage.getItem("passgen-theme");
+    if (storedTheme === "dark" || storedTheme === "light") setTheme(storedTheme);
+    setTimeout(() => setMounted(true), 50);
   }, []);
 
   useEffect(() => {
@@ -82,6 +87,14 @@ export default function CRTv2Design() {
     setConfigState(newConfig);
     setValidationError(validateConfig(newConfig));
     localStorage.setItem("passgen-config", JSON.stringify(newConfig));
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === "light" ? "dark" : "light";
+      localStorage.setItem("passgen-theme", next);
+      return next;
+    });
   }, []);
 
   const handleGenerate = () => {
@@ -101,237 +114,230 @@ export default function CRTv2Design() {
   return (
     <>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@400;600;700;900&display=swap');
+        /* ============================================================= */
+        /* Design Tokens                                                 */
+        /* ============================================================= */
 
-        .crt2-body {
-          --crt-bg: #050A08;
-          --crt-panel: #081210;
-          --crt-border: #0A2A1E;
-          --crt-green: #00FF88;
-          --crt-green-dim: #00AA55;
-          --crt-green-faint: #0A3D2A;
-          --crt-cyan: #00DDFF;
-          --crt-cyan-dim: #006688;
-          --crt-amber: #FF8800;
-          --crt-red: #FF4444;
-          --crt-teal: #00BB99;
+        .pg-body {
+          --bg: #e1e1e1;
+          --fg: #0a0a0a;
+          --surface: #f0f0f0;
+          --red: #ff0000;
+          --desc: #555555;
+          --rule: #d0d0d0;
+          --gray-mid: #999999;
+          --overlay: rgba(10, 10, 10, 0.4);
 
-          background: var(--crt-bg);
+          background: var(--bg);
           min-height: 100vh;
-          font-family: 'Fira Code', monospace;
-          color: var(--crt-green);
+          font-family: var(--font-archivo), 'Archivo', sans-serif;
+          color: var(--fg);
           position: relative;
           overflow-x: hidden;
         }
 
-        /* Deep scanlines */
-        .crt2-body::before {
-          content: '';
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          pointer-events: none;
-          z-index: 80;
-          background: repeating-linear-gradient(
-            0deg,
-            rgba(0,0,0,0.12) 0px,
-            rgba(0,0,0,0.12) 1px,
-            transparent 1px,
-            transparent 3px
-          );
+        .pg-body[data-theme="dark"] {
+          --bg: #081a19;
+          --fg: #f0f0f0;
+          --surface: #1a1a1a;
+          --desc: #9a9a9a;
+          --rule: #2a2a2a;
+          --gray-mid: #777777;
+          --overlay: rgba(0, 0, 0, 0.6);
         }
 
-        /* Vignette + glow */
-        .crt2-body::after {
-          content: '';
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          pointer-events: none;
-          z-index: 81;
-          background:
-            radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%),
-            radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.02) 0%, transparent 60%);
+        /* ============================================================= */
+        /* Slide-up Entrance Animation                                   */
+        /* ============================================================= */
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
-        .crt2-title {
-          font-family: 'Orbitron', sans-serif;
-          font-weight: 900;
-          font-size: clamp(1.8rem, 4vw, 2.8rem);
+        .pg-main {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+
+        .pg-main.pg-visible {
+          animation: slideUp 0.5s ease-out forwards;
+        }
+
+        /* ============================================================= */
+        /* Title                                                         */
+        /* ============================================================= */
+
+        .pg-title {
+          font-family: var(--font-archivo-black), 'Archivo Black', sans-serif;
+          font-weight: 400;
+          font-size: clamp(2rem, 5vw, 3.2rem);
           text-transform: uppercase;
-          letter-spacing: 0.15em;
+          letter-spacing: -0.03em;
           text-align: center;
-          text-shadow:
-            0 0 10px rgba(0,255,136,0.5),
-            0 0 30px rgba(0,255,136,0.2),
-            0 0 60px rgba(0,255,136,0.1);
+          color: var(--fg);
+          margin: 0;
         }
 
-        .crt2-sub {
-          font-family: 'Fira Code', monospace;
-          font-size: 14px;
-          color: var(--crt-green-dim);
-          text-align: center;
-          text-shadow: 0 0 6px rgba(0,255,136,0.3);
-          margin-top: 4px;
-        }
-
-        .crt2-glow {
-          text-shadow: 0 0 6px rgba(0,255,136,0.4);
-        }
-
-        .crt2-btn {
-          font-family: 'Orbitron', sans-serif;
-          font-weight: 600;
+        .pg-sub {
+          font-family: var(--font-archivo), 'Archivo', sans-serif;
           font-size: 15px;
+          font-weight: 500;
+          color: var(--desc);
+          text-align: center;
+          text-transform: uppercase;
           letter-spacing: 0.12em;
+          margin-top: 6px;
+        }
+
+        /* ============================================================= */
+        /* Buttons                                                       */
+        /* ============================================================= */
+
+        .pg-btn {
+          font-family: var(--font-archivo-black), 'Archivo Black', sans-serif;
+          font-weight: 400;
+          font-size: 16px;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
-          background: transparent;
-          color: var(--crt-green);
-          border: 1px solid var(--crt-green-dim);
-          padding: 16px 28px;
+          background: var(--surface);
+          color: var(--fg);
+          border: 1px solid var(--rule);
+          padding: 14px 24px;
           cursor: pointer;
-          transition: all 0.2s;
-          text-shadow: 0 0 6px rgba(0,255,136,0.3);
+          transition: background 0.2s, color 0.2s, border-color 0.2s;
         }
 
-        .crt2-btn:hover {
-          background: rgba(0,255,136,0.1);
-          border-color: var(--crt-green);
-          box-shadow: 0 0 20px rgba(0,255,136,0.15), inset 0 0 20px rgba(0,255,136,0.05);
+        .pg-btn:hover {
+          background: var(--fg);
+          color: var(--bg);
+          border-color: var(--fg);
         }
 
-        .crt2-btn:disabled {
-          color: var(--crt-green-faint);
-          border-color: var(--crt-green-faint);
+        .pg-btn:disabled {
+          color: var(--gray-mid);
+          border-color: var(--rule);
           cursor: not-allowed;
-          text-shadow: none;
+          background: var(--surface);
+          opacity: 0.5;
         }
 
-        .crt2-btn:disabled:hover {
-          background: transparent;
-          box-shadow: none;
+        .pg-btn:disabled:hover {
+          background: var(--surface);
+          color: var(--gray-mid);
+          border-color: var(--rule);
         }
 
-        .crt2-btn-red {
-          color: var(--crt-red);
-          border-color: rgba(255,68,68,0.4);
-          text-shadow: 0 0 6px rgba(255,68,68,0.3);
+        .pg-btn-red {
+          color: var(--red);
+          border-color: var(--red);
         }
 
-        .crt2-btn-red:hover {
-          background: rgba(255,68,68,0.1);
-          border-color: var(--crt-red);
-          box-shadow: 0 0 20px rgba(255,68,68,0.15);
+        .pg-btn-red:hover {
+          background: var(--red);
+          color: #ffffff;
+          border-color: var(--red);
         }
 
-        .crt2-btn-red:disabled {
-          color: rgba(255,68,68,0.2);
-          border-color: rgba(255,68,68,0.15);
-          text-shadow: none;
+        .pg-btn-red:disabled {
+          color: var(--red);
+          border-color: var(--red);
+          opacity: 0.3;
         }
 
-        .crt2-input {
-          font-family: 'Fira Code', monospace;
-          font-size: 15px;
-          background: rgba(0,255,136,0.03);
-          border: 1px solid var(--crt-green-faint);
-          color: var(--crt-green);
+        .pg-btn-red:disabled:hover {
+          background: var(--surface);
+          color: var(--red);
+          border-color: var(--red);
+        }
+
+        /* ============================================================= */
+        /* Inputs                                                        */
+        /* ============================================================= */
+
+        .pg-input {
+          font-family: var(--font-fira-code), 'Fira Code', monospace;
+          font-size: 14px;
+          background: var(--surface);
+          border: 1px solid var(--rule);
+          color: var(--fg);
           padding: 10px 14px;
           outline: none;
           width: 100%;
-          border-radius: 2px;
           transition: border-color 0.2s;
-          text-shadow: 0 0 3px rgba(0,255,136,0.2);
         }
 
-        .crt2-input:focus {
-          border-color: var(--crt-green-dim);
-          box-shadow: 0 0 10px rgba(0,255,136,0.06);
+        .pg-input:focus {
+          border-color: var(--fg);
         }
 
-        .crt2-input::placeholder { color: var(--crt-green-faint); }
+        .pg-input::placeholder { color: var(--gray-mid); }
 
-        .password-crt2 {
-          padding: 16px 18px;
-          background: rgba(0,255,136,0.02);
-          border: 1px solid var(--crt-green-faint);
-          border-radius: 3px;
+        /* ============================================================= */
+        /* Password Items                                                */
+        /* ============================================================= */
+
+        .pg-password {
+          padding: 14px 16px;
+          background: var(--surface);
+          border: 1px solid var(--rule);
           cursor: pointer;
-          font-family: 'Fira Code', monospace;
+          font-family: var(--font-fira-code), 'Fira Code', monospace;
           font-size: 15px;
-          color: var(--crt-green);
-          transition: all 0.2s;
+          color: var(--fg);
+          transition: background 0.2s, border-color 0.2s;
           overflow-x: auto;
           white-space: nowrap;
-          text-shadow: 0 0 4px rgba(0,255,136,0.3);
         }
 
-        .password-crt2:hover {
-          border-color: var(--crt-green-dim);
-          background: rgba(0,255,136,0.05);
-          box-shadow: 0 0 12px rgba(0,255,136,0.08);
+        .pg-password:hover {
+          border-color: var(--fg);
+          background: var(--bg);
         }
 
-        .crt2-label {
-          font-family: 'Fira Code', monospace;
-          font-weight: 500;
-          font-size: 13px;
-          color: var(--crt-cyan);
+        /* ============================================================= */
+        /* Config Labels                                                 */
+        /* ============================================================= */
+
+        .pg-label {
+          font-family: var(--font-archivo-black), 'Archivo Black', sans-serif;
+          font-weight: 400;
+          font-size: 12px;
+          color: var(--red);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
           display: block;
           margin-bottom: 6px;
-          text-shadow: 0 0 4px rgba(0,221,255,0.2);
         }
 
-        .crt2-range {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 100%;
-          height: 4px;
-          background: var(--crt-green-faint);
-          outline: none;
-          border-radius: 2px;
-        }
+        /* ============================================================= */
+        /* Toast                                                         */
+        /* ============================================================= */
 
-        .crt2-range::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          background: var(--crt-green);
-          border: none;
-          cursor: pointer;
-          box-shadow: 0 0 10px rgba(0,255,136,0.5);
-          border-radius: 2px;
-        }
-
-        .crt2-range::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          background: var(--crt-green);
-          border: none;
-          cursor: pointer;
-          box-shadow: 0 0 10px rgba(0,255,136,0.5);
-          border-radius: 2px;
-        }
-
-        .toast-crt2 {
+        .pg-toast {
           position: fixed;
           top: 16px;
-          right: 16px;
-          background: var(--crt-panel);
-          border: 1px solid var(--crt-green-dim);
-          color: var(--crt-green);
+          right: 70px;
+          background: var(--surface);
+          border: 2px solid var(--red);
+          color: var(--fg);
           padding: 12px 20px;
-          font-family: 'Fira Code', monospace;
+          font-family: var(--font-archivo-black), 'Archivo Black', sans-serif;
           font-size: 14px;
-          text-shadow: 0 0 6px rgba(0,255,136,0.4);
-          box-shadow: 0 0 20px rgba(0,255,136,0.1);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
           z-index: 100;
         }
 
-        .config-overlay {
+        /* ============================================================= */
+        /* Config Modal                                                  */
+        /* ============================================================= */
+
+        .pg-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.75);
+          background: var(--overlay);
+          backdrop-filter: blur(4px);
           z-index: 90;
           display: flex;
           align-items: center;
@@ -339,34 +345,32 @@ export default function CRTv2Design() {
           padding: 20px;
         }
 
-        .config-modal {
-          background: var(--crt-panel);
-          border: 1px solid var(--crt-green-dim);
-          border-radius: 4px;
+        .pg-modal {
+          background: var(--surface);
+          border: 2px solid var(--fg);
           width: 100%;
           max-width: 520px;
           max-height: 80vh;
           overflow-y: auto;
-          box-shadow: 0 0 40px rgba(0,255,136,0.08), 0 0 80px rgba(0,0,0,0.5);
         }
 
-        .config-modal::-webkit-scrollbar { width: 6px; }
-        .config-modal::-webkit-scrollbar-track { background: var(--crt-bg); }
-        .config-modal::-webkit-scrollbar-thumb { background: var(--crt-green-faint); border-radius: 3px; }
+        .pg-modal::-webkit-scrollbar { width: 6px; }
+        .pg-modal::-webkit-scrollbar-track { background: var(--bg); }
+        .pg-modal::-webkit-scrollbar-thumb { background: var(--gray-mid); }
 
-        .config-modal-header {
+        .pg-modal-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 14px 20px;
-          border-bottom: 1px solid var(--crt-border);
+          border-bottom: 1px solid var(--rule);
         }
 
-        .config-close-btn {
+        .pg-close-btn {
           background: none;
-          border: 1px solid var(--crt-green-faint);
-          color: var(--crt-green-dim);
-          font-family: 'Fira Code', monospace;
+          border: 1px solid var(--rule);
+          color: var(--desc);
+          font-family: var(--font-archivo), 'Archivo', sans-serif;
           font-size: 16px;
           width: 32px;
           height: 32px;
@@ -374,59 +378,117 @@ export default function CRTv2Design() {
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          border-radius: 2px;
           transition: all 0.2s;
         }
 
-        .config-close-btn:hover {
-          color: var(--crt-red);
-          border-color: var(--crt-red);
-          background: rgba(255,68,68,0.1);
+        .pg-close-btn:hover {
+          color: var(--red);
+          border-color: var(--red);
+          background: var(--bg);
         }
 
-        .crt2-chip {
-          font-family: 'Fira Code', monospace;
-          font-size: 13px;
+        /* ============================================================= */
+        /* Chips                                                         */
+        /* ============================================================= */
+
+        .pg-chip {
+          font-family: var(--font-archivo), 'Archivo', sans-serif;
+          font-size: 16px;
+          font-weight: 600;
           padding: 5px 12px;
-          border: 1px solid var(--crt-green-faint);
-          border-radius: 2px;
+          border: 1px solid var(--rule);
           cursor: pointer;
           transition: all 0.2s;
-          background: transparent;
-          color: var(--crt-green-dim);
+          background: var(--surface);
+          color: var(--desc);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
 
-        .crt2-chip:hover { border-color: var(--crt-green-dim); color: var(--crt-green); }
-
-        .crt2-chip-active {
-          background: rgba(0,255,136,0.15);
-          border-color: var(--crt-green);
-          color: var(--crt-green);
+        .pg-chip:hover {
+          border-color: var(--fg);
+          color: var(--fg);
         }
 
+        .pg-chip-active {
+          background: var(--fg);
+          border-color: var(--fg);
+          color: var(--bg);
+        }
+
+        /* ============================================================= */
+        /* Theme Toggle                                                  */
+        /* ============================================================= */
+
+        .pg-theme-toggle {
+          position: fixed;
+          top: 16px;
+          right: 16px;
+          background: var(--surface);
+          border: 2px solid var(--fg);
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--fg);
+          transition: background 0.2s, color 0.2s;
+          z-index: 80;
+        }
+
+        .pg-theme-toggle:hover {
+          background: var(--fg);
+          color: var(--bg);
+        }
       `}</style>
 
-      <div className="crt2-body">
-        <div style={{ maxWidth: 760, margin: '0 auto', padding: '28px 20px 100px', position: 'relative', zIndex: 1 }}>
+      <div className="pg-body" data-theme={theme}>
+        {/* Theme Toggle */}
+        <button className="pg-theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+          {theme === 'light' ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M9 3.5a7.5 7.5 0 0 0 5.5 12.93A7.5 7.5 0 1 1 9 3.5z"/>
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          )}
+        </button>
 
+        {/* Main Content */}
+        <div
+          className={`pg-main${mounted ? ' pg-visible' : ''}`}
+          style={{ maxWidth: 760, margin: '0 auto', padding: '28px 2.5rem 100px', position: 'relative', zIndex: 1 }}
+        >
           {/* Header */}
-          <h1 className="crt2-title" style={{ marginBottom: 2 }}>PASSGEN</h1>
-          <p className="crt2-sub">secure password generation</p>
+          <h1 className="pg-title" style={{ marginBottom: 2 }}>PASSGEN</h1>
+          <p className="pg-sub">secure password generation</p>
 
-          <div style={{ borderBottom: '1px solid var(--crt-border)', margin: '16px 0' }} />
+          {/* Divider */}
+          <div style={{ borderBottom: '4px solid var(--fg)', margin: '16px 0' }} />
 
-          {/* Action buttons */}
+          {/* Action Buttons */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             <button onClick={handleGenerate} disabled={validationError !== null}
-              className="crt2-btn" style={{ flex: 1, padding: '16px 24px' }}>
-              GENERATE()
+              className="pg-btn" style={{ flex: 1, padding: '14px 24px' }}>
+              GENERATE
             </button>
             <button onClick={() => setShowConfig(true)}
-              className="crt2-btn" style={{ padding: '16px 20px' }}>
+              className="pg-btn" style={{ padding: '14px 20px' }}>
               CONFIG
             </button>
             <button onClick={() => setPasswords([])} disabled={passwords.length === 0}
-              className="crt2-btn crt2-btn-red" style={{ padding: '16px 20px' }}>
+              className="pg-btn pg-btn-red" style={{ padding: '14px 20px' }}>
               FLUSH
             </button>
           </div>
@@ -434,37 +496,38 @@ export default function CRTv2Design() {
           {/* Empty State */}
           {passwords.length === 0 && (
             <div style={{
-              background: 'var(--crt-panel)',
-              border: '1px solid var(--crt-border)',
-              borderRadius: 4,
+              background: 'var(--surface)',
+              border: '1px solid var(--rule)',
               padding: '20px 18px',
-              color: 'var(--crt-green-dim)',
-              fontSize: 15,
+              color: 'var(--desc)',
+              fontSize: 16,
               lineHeight: 1.8,
+              fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
             }}>
               <p style={{ marginBottom: 10 }}>
-                <span style={{ color: 'var(--crt-cyan)' }}>Passgen</span> generates cryptographically
+                <span style={{ color: 'var(--red)', fontWeight: 700 }}>Passgen</span> generates cryptographically
                 secure passwords using hardware entropy via the Web Crypto API. All operations
                 execute locally in your browser. No data is transmitted.
               </p>
               <p>
-                Click <span style={{ color: 'var(--crt-green)' }}>GENERATE()</span> to generate a password.
-                Click any output to copy to your clipboard. Adjust parameters via <span style={{ color: 'var(--crt-green)' }}>CONFIG</span>.
-                Use <span style={{ color: 'var(--crt-red)' }}>FLUSH</span> to clear all generated passwords from memory.
+                Click <span style={{ color: 'var(--fg)', fontWeight: 700 }}>GENERATE</span> to generate a password.
+                Click any output to copy to your clipboard. Adjust parameters via <span style={{ color: 'var(--fg)', fontWeight: 700 }}>CONFIG</span>.
+                Use <span style={{ color: 'var(--red)', fontWeight: 700 }}>FLUSH</span> to clear all generated passwords from memory.
               </p>
             </div>
           )}
 
-          {/* Passwords */}
+          {/* Password hint */}
           {passwords.length > 0 && (
-            <div style={{ fontSize: 13, color: 'var(--crt-green-faint)', marginBottom: 8 }}>
-              // click to copy to clipboard buffer
+            <div style={{ fontSize: 12, color: 'var(--gray-mid)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              click to copy
             </div>
           )}
 
+          {/* Password List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {passwords.map((pwd, idx) => (
-              <div key={idx} onClick={() => handleCopy(pwd)} className="password-crt2" title="Click to copy">
+              <div key={idx} onClick={() => handleCopy(pwd)} className="pg-password" title="Click to copy">
                 {pwd}
               </div>
             ))}
@@ -473,91 +536,103 @@ export default function CRTv2Design() {
 
         {/* Config Modal */}
         {showConfig && (
-          <div className="config-overlay" onClick={() => setShowConfig(false)}>
-            <div className="config-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="config-modal-header">
-                <span style={{ fontSize: 13, color: 'var(--crt-cyan)', textShadow: '0 0 4px rgba(0,221,255,0.2)' }}>
-                  // PARAMETERS
+          <div className="pg-overlay" onClick={() => setShowConfig(false)}>
+            <div className="pg-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="pg-modal-header">
+                <span style={{
+                  fontSize: 12,
+                  fontFamily: "var(--font-archivo-black), 'Archivo Black', sans-serif",
+                  color: 'var(--red)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}>
+                  PARAMETERS
                 </span>
-                <button className="config-close-btn" onClick={() => setShowConfig(false)}>
+                <button className="pg-close-btn" onClick={() => setShowConfig(false)}>
                   &#10005;
                 </button>
               </div>
               <div style={{ padding: 20 }}>
                 {validationError && (
                   <div style={{
-                    borderLeft: '3px solid var(--crt-red)',
+                    borderLeft: '3px solid var(--red)',
                     padding: '8px 12px',
-                    color: 'var(--crt-red)',
-                    fontSize: 14,
+                    color: 'var(--red)',
+                    fontSize: 13,
                     marginBottom: 14,
-                    background: 'rgba(255,68,68,0.05)',
-                    textShadow: '0 0 4px rgba(255,68,68,0.3)',
+                    background: 'var(--bg)',
+                    fontFamily: "var(--font-fira-code), 'Fira Code', monospace",
                   }}>
                     {validationError}
                   </div>
                 )}
 
+                {/* Length slider */}
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                    <span className="crt2-label" style={{ marginBottom: 0 }}>--length</span>
-                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700, color: 'var(--crt-green)', textShadow: '0 0 8px rgba(0,255,136,0.4)' }}>{config.length}</span>
+                    <span className="pg-label" style={{ marginBottom: 0 }}>LENGTH</span>
+                    <span style={{
+                      fontFamily: "var(--font-archivo-black), 'Archivo Black', sans-serif",
+                      fontSize: 26,
+                      color: 'var(--fg)',
+                    }}>{config.length}</span>
                   </div>
                   <input type="range" min="10" max="64" value={config.length}
                     onChange={(e) => updateConfig({ ...config, length: parseInt(e.target.value) || 10 })}
-                    className="crt2-range"
                   />
                 </div>
 
+                {/* Min/max fields */}
                 {[
-                  { label: '--upper', key: 'upper' as const },
-                  { label: '--lower', key: 'lower' as const },
-                  { label: '--digits', key: 'digits' as const },
-                  { label: '--symbols', key: 'symbols' as const },
+                  { label: 'UPPER', key: 'upper' as const },
+                  { label: 'LOWER', key: 'lower' as const },
+                  { label: 'DIGITS', key: 'digits' as const },
+                  { label: 'SYMBOLS', key: 'symbols' as const },
                 ].map(({ label, key }) => (
                   <div key={key} style={{ marginBottom: 14 }}>
-                    <span className="crt2-label">{label}</span>
+                    <span className="pg-label">{label}</span>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>min</div>
+                        <div style={{ fontSize: 11, color: 'var(--gray-mid)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>min</div>
                         <input type="number" min="0" value={config[key][0]}
                           onChange={(e) => updateConfig({ ...config, [key]: [parseInt(e.target.value) || 0, config[key][1]] })}
-                          className="crt2-input"
+                          className="pg-input"
                         />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: 'var(--crt-green-faint)', marginBottom: 3 }}>max</div>
+                        <div style={{ fontSize: 11, color: 'var(--gray-mid)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>max</div>
                         <input type="number" min="0" value={config[key][1] ?? ""} placeholder="null"
                           onChange={(e) => updateConfig({ ...config, [key]: [config[key][0], e.target.value === "" ? null : parseInt(e.target.value)] })}
-                          className="crt2-input"
+                          className="pg-input"
                         />
                       </div>
                     </div>
                   </div>
                 ))}
 
-                <div style={{ borderBottom: '1px solid var(--crt-border)', margin: '10px 0' }} />
+                <div style={{ borderBottom: '1px solid var(--rule)', margin: '10px 0' }} />
 
+                {/* Charset */}
                 <div style={{ marginBottom: 16 }}>
-                  <span className="crt2-label">--charset</span>
+                  <span className="pg-label">CHARSET</span>
                   <input type="text" value={config.useSymbols}
                     onChange={(e) => updateConfig({ ...config, useSymbols: e.target.value })}
-                    className="crt2-input" style={{ marginBottom: 8 }}
+                    className="pg-input" style={{ marginBottom: 8 }}
                   />
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => updateConfig({ ...config, useSymbols: PASSGEN_SAFESET })}
-                      className={`crt2-chip ${config.useSymbols === PASSGEN_SAFESET ? 'crt2-chip-active' : ''}`}>
+                      className={`pg-chip ${config.useSymbols === PASSGEN_SAFESET ? 'pg-chip-active' : ''}`}>
                       SafeSet
                     </button>
                     <button onClick={() => updateConfig({ ...config, useSymbols: OWASP_SAFESET })}
-                      className={`crt2-chip ${config.useSymbols === OWASP_SAFESET ? 'crt2-chip-active' : ''}`}>
+                      className={`pg-chip ${config.useSymbols === OWASP_SAFESET ? 'pg-chip-active' : ''}`}>
                       OWASP
                     </button>
                   </div>
                 </div>
 
                 <button onClick={() => updateConfig(DEFAULT_CONFIG)}
-                  className="crt2-btn" style={{ width: '100%', fontSize: 12, padding: '8px', letterSpacing: '0.08em' }}>
+                  className="pg-btn" style={{ width: '100%', fontSize: 12, padding: '8px', letterSpacing: '0.08em' }}>
                   RESET DEFAULTS
                 </button>
               </div>
@@ -567,49 +642,62 @@ export default function CRTv2Design() {
 
         {/* Toast */}
         {showCopied && (
-          <div className="toast-crt2">
-            CLIPBOARD &lt;&lt; OK
+          <div className="pg-toast">
+            COPIED
           </div>
         )}
 
         {/* Footer */}
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
-          borderTop: '1px solid var(--crt-green-faint)',
-          background: '#0B1A14',
+          borderTop: '4px solid var(--fg)',
+          background: 'var(--surface)',
           zIndex: 1,
         }}>
           <div style={{
             maxWidth: 760,
             margin: '0 auto',
-            padding: '10px 20px',
+            padding: '10px 2.5rem',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            fontFamily: "'Fira Code', monospace",
-            fontSize: 13,
-            color: 'var(--crt-green)',
-            fontWeight: 500,
+            fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
+            fontSize: 12,
+            color: 'var(--desc)',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
           }}>
-            <span>
+            <span style={{ display: 'flex', gap: 8 }}>
+              <a href="https://www.unit03.net"
+                target="_blank" rel="noopener noreferrer"
+                style={{ color: 'var(--desc)', textDecoration: 'none', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '')}>
+                NA-PARSE
+              </a>
+              <span style={{ color: 'var(--rule)' }}>/</span>
               <a href="https://github.com/na-parse/passgen"
                 target="_blank" rel="noopener noreferrer"
-                style={{ color: 'var(--crt-green)', textDecoration: 'none', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--crt-cyan)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--crt-green)')}>
-                na-parse / passgen
+                style={{ color: 'var(--desc)', textDecoration: 'none', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '')}>
+                PASSGEN-SOURCE
               </a>
             </span>
-            <span style={{ color: 'var(--crt-green-dim)' }}>MIT License</span>
+            <span style={{ color: 'var(--gray-mid)' }}>MIT License</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <button
                 onClick={() => setExpandedPolicy(expandedPolicy === "privacy" ? null : "privacy")}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: "'Fira Code', monospace", fontSize: 13, fontWeight: 500,
-                  color: 'var(--crt-green)',
+                  fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
+                  fontSize: 12, fontWeight: 600,
+                  color: 'var(--desc)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--crt-cyan)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--crt-green)')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '')}
               >
                 Privacy {expandedPolicy === "privacy" ? "▼" : "▶"}
               </button>
@@ -617,12 +705,15 @@ export default function CRTv2Design() {
                 onClick={() => setExpandedPolicy(expandedPolicy === "terms" ? null : "terms")}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: "'Fira Code', monospace", fontSize: 13, fontWeight: 500,
-                  color: 'var(--crt-green)',
+                  fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
+                  fontSize: 12, fontWeight: 600,
+                  color: 'var(--desc)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--crt-cyan)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--crt-green)')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '')}
               >
                 Terms {expandedPolicy === "terms" ? "▼" : "▶"}
               </button>
@@ -630,9 +721,9 @@ export default function CRTv2Design() {
                 href="https://github.com/na-parse"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: 'var(--crt-green)', transition: 'color 0.2s', display: 'flex' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--crt-cyan)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--crt-green)')}
+                style={{ color: 'var(--desc)', transition: 'color 0.2s', display: 'flex' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '')}
               >
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
@@ -641,47 +732,49 @@ export default function CRTv2Design() {
             </div>
           </div>
 
+          {/* Privacy Policy Expanded */}
           {expandedPolicy === "privacy" && (
             <div style={{
-              padding: '14px 20px',
-              background: 'var(--crt-panel)',
-              borderTop: '1px solid var(--crt-green-faint)',
-              fontFamily: "'Fira Code', monospace",
+              padding: '14px 2.5rem',
+              background: 'var(--bg)',
+              borderTop: '1px solid var(--rule)',
+              fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
               fontSize: 13,
-              color: 'var(--crt-green-dim)',
+              color: 'var(--desc)',
               lineHeight: 1.8,
               maxHeight: 200,
               overflowY: 'auto',
             }}>
-              <div style={{ color: 'var(--crt-cyan)', fontWeight: 600, marginBottom: 8 }}>// PRIVACY POLICY</div>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Open Source:</strong> This application is open source and publicly available on GitHub under the MIT License. You can review the code, fork it, and modify it as needed.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Client-Side Generation:</strong> All passwords are generated entirely in your browser using the Web Cryptography API. No passwords are transmitted to any server, stored remotely, or processed by third parties.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Configuration Storage:</strong> Your password generation settings are stored only in your browser&#39;s localStorage. This data remains on your device and is never transmitted to any server.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Zero Tracking:</strong> This application contains no analytics, tracking pixels, cookies, or telemetry. We have no mechanism to identify you or track what you do with this tool.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>External Resources:</strong> This app loads fonts from Google Fonts. Review Google&#39;s privacy policy regarding their font services.</p>
-              <p><strong style={{ color: 'var(--crt-green)' }}>Your Security Responsibility:</strong> Back up generated passwords to your password manager immediately. Clear your browser history/cache if needed. Your security depends on your device and browser security.</p>
+              <div style={{ fontFamily: "var(--font-archivo-black), 'Archivo Black', sans-serif", color: 'var(--red)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 12 }}>PRIVACY POLICY</div>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Open Source:</strong> This application is open source and publicly available on GitHub under the MIT License. You can review the code, fork it, and modify it as needed.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Client-Side Generation:</strong> All passwords are generated entirely in your browser using the Web Cryptography API. No passwords are transmitted to any server, stored remotely, or processed by third parties.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Configuration Storage:</strong> Your password generation settings are stored only in your browser&#39;s localStorage. This data remains on your device and is never transmitted to any server.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Zero Tracking:</strong> This application contains no analytics, tracking pixels, cookies, or telemetry. We have no mechanism to identify you or track what you do with this tool.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>External Resources:</strong> This app loads fonts from Google Fonts. Review Google&#39;s privacy policy regarding their font services.</p>
+              <p><strong style={{ color: 'var(--fg)' }}>Your Security Responsibility:</strong> Back up generated passwords to your password manager immediately. Clear your browser history/cache if needed. Your security depends on your device and browser security.</p>
             </div>
           )}
 
+          {/* Terms Expanded */}
           {expandedPolicy === "terms" && (
             <div style={{
-              padding: '14px 20px',
-              background: 'var(--crt-panel)',
-              borderTop: '1px solid var(--crt-green-faint)',
-              fontFamily: "'Fira Code', monospace",
+              padding: '14px 2.5rem',
+              background: 'var(--bg)',
+              borderTop: '1px solid var(--rule)',
+              fontFamily: "var(--font-archivo), 'Archivo', sans-serif",
               fontSize: 13,
-              color: 'var(--crt-green-dim)',
+              color: 'var(--desc)',
               lineHeight: 1.8,
               maxHeight: 200,
               overflowY: 'auto',
             }}>
-              <div style={{ color: 'var(--crt-cyan)', fontWeight: 600, marginBottom: 8 }}>// TERMS OF SERVICE</div>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>MIT License:</strong> This software is licensed under the MIT License. View the full license on GitHub. You are free to use, modify, fork, and distribute this code under the MIT terms.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>As-Is Disclaimer:</strong> This application is provided &#34;as-is&#34; without warranty of any kind, express or implied. We implement industry-standard cryptographic practices, but make no guarantees about password strength, randomness quality, or security.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>No Liability:</strong> We are not liable for any damages, data loss, security breaches, or access loss resulting from your use of this application. You assume all risk when using this tool.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Your Responsibility:</strong> You are responsible for managing and securing generated passwords. Immediately save passwords to your password manager. We have no ability to recover lost passwords.</p>
-              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--crt-green)' }}>Ethical Use:</strong> Use this tool only for legitimate password generation. Do not use it for unauthorized access, system abuse, or any malicious purpose.</p>
-              <p><strong style={{ color: 'var(--crt-green)' }}>Security Disclosure:</strong> If you discover a security vulnerability, please report it responsibly to the maintainers on GitHub rather than public disclosure.</p>
+              <div style={{ fontFamily: "var(--font-archivo-black), 'Archivo Black', sans-serif", color: 'var(--red)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 12 }}>TERMS OF SERVICE</div>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>MIT License:</strong> This software is licensed under the MIT License. View the full license on GitHub. You are free to use, modify, fork, and distribute this code under the MIT terms.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>As-Is Disclaimer:</strong> This application is provided &#34;as-is&#34; without warranty of any kind, express or implied. We implement industry-standard cryptographic practices, but make no guarantees about password strength, randomness quality, or security.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>No Liability:</strong> We are not liable for any damages, data loss, security breaches, or access loss resulting from your use of this application. You assume all risk when using this tool.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Your Responsibility:</strong> You are responsible for managing and securing generated passwords. Immediately save passwords to your password manager. We have no ability to recover lost passwords.</p>
+              <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--fg)' }}>Ethical Use:</strong> Use this tool only for legitimate password generation. Do not use it for unauthorized access, system abuse, or any malicious purpose.</p>
+              <p><strong style={{ color: 'var(--fg)' }}>Security Disclosure:</strong> If you discover a security vulnerability, please report it responsibly to the maintainers on GitHub rather than public disclosure.</p>
             </div>
           )}
         </div>
