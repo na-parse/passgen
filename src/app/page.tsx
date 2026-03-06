@@ -85,8 +85,11 @@ export default function PassgenPage() {
   useEffect(() => {
     const stored = localStorage.getItem("passgen-config");
     if (stored) {
-      try { setConfigState(JSON.parse(stored) as PasswordConfig); }
-      catch { setConfigState(DEFAULT_CONFIG); }
+      try {
+        const parsed = JSON.parse(stored) as PasswordConfig;
+        setConfigState(parsed);
+        setValidationError(validateConfig(parsed));
+      } catch { setConfigState(DEFAULT_CONFIG); }
     }
     const storedTheme = localStorage.getItem("passgen-theme");
     if (storedTheme === "dark" || storedTheme === "light") setTheme(storedTheme);
