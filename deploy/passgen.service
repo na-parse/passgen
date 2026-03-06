@@ -1,0 +1,17 @@
+[Unit]
+Description=passgen node/next.js webserver
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/passgen
+ExecStart=/usr/local/bin/bun run start
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3012
+SyslogIdentifier=node_passgen
+
+[Install]
+WantedBy=multi-user.target
