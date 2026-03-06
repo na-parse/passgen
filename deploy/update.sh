@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 set -e
+FORCE=false
+[[ "$1" == "force" ]] && FORCE=true
+
 RUNDIR="$(pwd)"
 REPO="na-parse/passgen.git"
 INSTALL_DIR="/var/www/passgen"
@@ -27,9 +30,13 @@ git fetch origin main --quiet
 COMMIT_REMOTE=$(git rev-parse origin/main)
 
 if [ "${COMMIT_LOCAL}" = "${COMMIT_REMOTE}" ]; then
-    echo "No updates, already at ${COMMIT_LOCAL:0:7}"
-    cd "$RUNDIR"
-    exit 0
+    if [ "${FORCE}" = "true" ]; then
+        echo "No updates, already at ${COMMIT_LOCAL:0:7} (force mode, continuing)"
+    else
+        echo "No updates, already at ${COMMIT_LOCAL:0:7}"
+        cd "$RUNDIR"
+        exit 0
+    fi
 fi
 
 # Pull update and rebuild site
@@ -38,9 +45,9 @@ git pull origin main
 echo
 
 # Service File Setup/Validation (after pull so the file is present)
-if [[ ! -f "$SYSTEMD_SERVICE" ]]; then
-    echo "Installing systemd service file: $DOT_SERVICE"
-    sudo ln -s "$SERVICE_SOURCE" "$SYSTEMD_SERVICE"
+if [[ ! -L "$SYSTEMD_SERVICE" ]] || [[ "$(readlink "$SYSTEMD_SERVICE")" != "$SERVICE_SOURCE" ]]; then
+    echo "Installing/updating systemd service file: $DOT_SERVICE"
+    sudo ln -sf "$SERVICE_SOURCE" "$SYSTEMD_SERVICE"
 fi
 sudo systemctl daemon-reload
 
