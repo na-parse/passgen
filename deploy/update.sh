@@ -62,6 +62,7 @@ else
     echo "=== Service Restart Completed:"
 fi
 
+# Final Exist Status and Report
 sudo systemctl status "${DOT_SERVICE}" -l --no-pager
 cd "$RUNDIR"
 exit $EXITVALUE
