@@ -78,6 +78,7 @@ export default function PassgenPage() {
   const [showCopied, setShowCopied] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [showInvalidConfig, setShowInvalidConfig] = useState(false);
   const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
@@ -118,7 +119,7 @@ export default function PassgenPage() {
   }, []);
 
   const handleGenerate = () => {
-    if (validationError) return;
+    if (validationError) { setShowInvalidConfig(true); return; }
     const pwd = generatePassword(config);
     setPasswords([pwd, ...passwords]);
   };
@@ -169,7 +170,6 @@ export default function PassgenPage() {
         <div className="pg-actions">
           <button
             onClick={handleGenerate}
-            disabled={validationError !== null}
             className="pg-btn pg-btn-flex"
           >
             GENERATE
@@ -318,6 +318,41 @@ export default function PassgenPage() {
               <button onClick={() => updateConfig(DEFAULT_CONFIG)} className="pg-btn pg-btn-sm">
                 RESET DEFAULTS
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invalid Config Modal */}
+      {showInvalidConfig && (
+        <div className="pg-overlay" onClick={() => setShowInvalidConfig(false)}>
+          <div className="pg-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pg-modal-header">
+              <span className="pg-modal-title">INVALID CONFIGURATION</span>
+              <button className="pg-close-btn" onClick={() => setShowInvalidConfig(false)}>
+                &#10005;
+              </button>
+            </div>
+            <div className="pg-modal-body">
+              <div className="pg-error">{validationError}</div>
+              <p style={{ margin: "16px 0 20px" }}>
+                Your saved configuration is invalid. Reset to defaults to continue generating passwords,
+                or close this dialog and adjust your settings via CONFIG.
+              </p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => { updateConfig(DEFAULT_CONFIG); setShowInvalidConfig(false); }}
+                  className="pg-btn pg-btn-flex"
+                >
+                  RESET TO DEFAULTS
+                </button>
+                <button
+                  onClick={() => { setShowInvalidConfig(false); setShowConfig(true); }}
+                  className="pg-btn pg-btn-icon"
+                >
+                  CONFIG
+                </button>
+              </div>
             </div>
           </div>
         </div>
