@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fonts:update": "bash scripts/update-fonts.sh"
   },
   "dependencies": {
     "next": "16.1.6",

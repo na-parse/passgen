@@ -15,6 +15,32 @@ const DEFAULT_CONFIG: PasswordConfig = {
   useSymbols: PASSGEN_SAFESET,
 };
 
+function loadStoredConfig(): PasswordConfig {
+  if (typeof window === "undefined") {
+    return DEFAULT_CONFIG;
+  }
+
+  const stored = localStorage.getItem("passgen-config");
+  if (!stored) {
+    return DEFAULT_CONFIG;
+  }
+
+  try {
+    return JSON.parse(stored) as PasswordConfig;
+  } catch {
+    return DEFAULT_CONFIG;
+  }
+}
+
+function loadStoredTheme(): "light" | "dark" {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const storedTheme = localStorage.getItem("passgen-theme");
+  return storedTheme === "dark" ? "dark" : "light";
+}
+
 function validateConfig(config: PasswordConfig): string | null {
   if (config.length < 10) return "ERR: LENGTH < 10";
   const mins = [config.upper[0], config.lower[0], config.digits[0], config.symbols[0]];
@@ -73,27 +99,19 @@ function copyToClipboard(text: string): Promise<void> {
 }
 
 export default function PassgenPage() {
-  const [config, setConfigState] = useState<PasswordConfig>(DEFAULT_CONFIG);
+  const [config, setConfigState] = useState<PasswordConfig>(() => loadStoredConfig());
   const [passwords, setPasswords] = useState<string[]>([]);
   const [showCopied, setShowCopied] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(() =>
+    validateConfig(loadStoredConfig())
+  );
   const [showConfig, setShowConfig] = useState(false);
   const [showInvalidConfig, setShowInvalidConfig] = useState(false);
   const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(() => loadStoredTheme());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("passgen-config");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as PasswordConfig;
-        setConfigState(parsed);
-        setValidationError(validateConfig(parsed));
-      } catch { setConfigState(DEFAULT_CONFIG); }
-    }
-    const storedTheme = localStorage.getItem("passgen-theme");
-    if (storedTheme === "dark" || storedTheme === "light") setTheme(storedTheme);
     setTimeout(() => setMounted(true), 50);
   }, []);
 

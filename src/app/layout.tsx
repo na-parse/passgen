@@ -1,23 +1,41 @@
 import type { Metadata } from "next";
-import { Archivo, Archivo_Black, Fira_Code } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const archivo = Archivo({
+const archivo = localFont({
   variable: "--font-archivo",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/archivo-latin.woff2",
+      style: "normal",
+      weight: "400 700",
+    },
+  ],
 });
 
-const archivoBlack = Archivo_Black({
+const archivoBlack = localFont({
   variable: "--font-archivo-black",
-  subsets: ["latin"],
-  weight: "400",
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/archivo-black-latin.woff2",
+      style: "normal",
+      weight: "400",
+    },
+  ],
 });
 
-const firaCode = Fira_Code({
+const firaCode = localFont({
   variable: "--font-fira-code",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/fira-code-latin.woff2",
+      style: "normal",
+      weight: "400 700",
+    },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -35,6 +53,12 @@ export default function RootLayout({
       <body
         className={`${archivo.variable} ${archivoBlack.variable} ${firaCode.variable}`}
       >
+        <noscript>
+          <div className="pg-noscript-banner">
+            <strong>JavaScript required.</strong> passgen runs locally in your
+            browser. Allow scripts for this site and reload to generate passwords.
+          </div>
+        </noscript>
         {children}
       </body>
     </html>
