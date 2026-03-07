@@ -423,7 +423,7 @@ export default function PassgenPage() {
             <p><strong>Client-Side Generation:</strong> All passwords are generated entirely in your browser using the Web Cryptography API. No passwords are transmitted to any server, stored remotely, or processed by third parties.</p>
             <p><strong>Configuration Storage:</strong> Your password generation settings are stored only in your browser&#39;s localStorage. This data remains on your device and is never transmitted to any server.</p>
             <p><strong>Zero Tracking:</strong> This application contains no analytics, tracking pixels, cookies, or telemetry. We have no mechanism to identify you or track what you do with this tool.</p>
-            <p><strong>External Resources:</strong> This app loads fonts from Google Fonts. Review Google&#39;s privacy policy regarding their font services.</p>
+            <p><strong>External Resources:</strong> All fonts are self-hosted and served directly from this site. No external font services or third-party resources are loaded.</p>
             <p><strong>Your Security Responsibility:</strong> Back up generated passwords to your password manager immediately. Clear your browser history/cache if needed. Your security depends on your device and browser security.</p>
           </div>
         )}
