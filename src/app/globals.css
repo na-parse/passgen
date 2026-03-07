@@ -4,6 +4,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.pg-noscript-banner {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 72px;
+  z-index: 200;
+  border: 2px solid #0a0a0a;
+  background: #f0f0f0;
+  color: #0a0a0a;
+  padding: 12px 16px;
+  font-family: var(--font-archivo), 'Archivo', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(10, 10, 10, 0.12);
+}
+
 /* ================================================================= */
 /* Design Tokens                                                      */
 /* ================================================================= */

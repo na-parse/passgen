@@ -31,10 +31,24 @@ function validateRules(rules: PassRule[], length: number): void {
   }
 }
 
+function getRandomInt(maxExclusive: number): number {
+  if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
+    throw new Error("maxExclusive must be a positive integer");
+  }
+
+  const randomValues = new Uint32Array(1);
+  const uint32Space = 0x1_0000_0000;
+  const limit = uint32Space - (uint32Space % maxExclusive);
+
+  do {
+    crypto.getRandomValues(randomValues);
+  } while (randomValues[0] >= limit);
+
+  return randomValues[0] % maxExclusive;
+}
+
 function getRandomChar(charset: string): string {
-  const randomBytes = new Uint8Array(1);
-  crypto.getRandomValues(randomBytes);
-  return charset[randomBytes[0] % charset.length];
+  return charset[getRandomInt(charset.length)];
 }
 
 function generatePasswordUnconstrained(config: PasswordConfig): string {
@@ -61,7 +75,7 @@ function generatePasswordUnconstrained(config: PasswordConfig): string {
   );
 
   while (passwordChars.length < config.length) {
-    const rule = availableRules[Math.floor(Math.random() * availableRules.length)];
+    const rule = availableRules[getRandomInt(availableRules.length)];
     passwordChars.push(getRandomChar(rule.charset));
     rule.returnedChars++;
 
@@ -71,7 +85,7 @@ function generatePasswordUnconstrained(config: PasswordConfig): string {
   }
 
   for (let i = passwordChars.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = getRandomInt(i + 1);
     [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
   }
 
