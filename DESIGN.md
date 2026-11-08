@@ -182,7 +182,7 @@ Validation runs on every config change. If the saved config is invalid, generati
 
 ### React State
 
-The UI is implemented as a single client component using `useState`, `useEffect`, and `useCallback`.
+The UI is implemented as a single client component using `useState` and `useEffect`. Stored config and theme are read through `useSyncExternalStore`, so the first client render matches the prerendered HTML.
 
 Key state values include:
 

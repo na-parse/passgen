@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { generatePassword, PasswordConfig } from "@/lib/passwordGenerator";
 
 const PASSGEN_SAFESET = "!@#$%&_.,{}[]/";
@@ -15,12 +15,31 @@ const DEFAULT_CONFIG: PasswordConfig = {
   useSymbols: PASSGEN_SAFESET,
 };
 
-function loadStoredConfig(): PasswordConfig {
-  if (typeof window === "undefined") {
-    return DEFAULT_CONFIG;
-  }
+const CONFIG_KEY = "passgen-config";
+const THEME_KEY = "passgen-theme";
 
-  const stored = localStorage.getItem("passgen-config");
+const storageListeners = new Set<() => void>();
+
+function subscribeToStorage(listener: () => void): () => void {
+  storageListeners.add(listener);
+  return () => storageListeners.delete(listener);
+}
+
+function writeStored(key: string, value: string): void {
+  localStorage.setItem(key, value);
+  storageListeners.forEach((listener) => listener());
+}
+
+// Null during the prerender and hydration, so the first client render matches the HTML.
+function useStored(key: string): string | null {
+  return useSyncExternalStore(
+    subscribeToStorage,
+    () => localStorage.getItem(key),
+    () => null
+  );
+}
+
+function parseConfig(stored: string | null): PasswordConfig {
   if (!stored) {
     return DEFAULT_CONFIG;
   }
@@ -32,13 +51,8 @@ function loadStoredConfig(): PasswordConfig {
   }
 }
 
-function loadStoredTheme(): "light" | "dark" {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  const storedTheme = localStorage.getItem("passgen-theme");
-  return storedTheme === "dark" ? "dark" : "light";
+function updateConfig(newConfig: PasswordConfig): void {
+  writeStored(CONFIG_KEY, JSON.stringify(newConfig));
 }
 
 function validateConfig(config: PasswordConfig): string | null {
@@ -99,16 +113,14 @@ function copyToClipboard(text: string): Promise<void> {
 }
 
 export default function PassgenPage() {
-  const [config, setConfigState] = useState<PasswordConfig>(() => loadStoredConfig());
+  const config = parseConfig(useStored(CONFIG_KEY));
+  const validationError = validateConfig(config);
+  const theme = useStored(THEME_KEY) === "dark" ? "dark" : "light";
   const [passwords, setPasswords] = useState<string[]>([]);
   const [showCopied, setShowCopied] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(() =>
-    validateConfig(loadStoredConfig())
-  );
   const [showConfig, setShowConfig] = useState(false);
   const [showInvalidConfig, setShowInvalidConfig] = useState(false);
   const [expandedPolicy, setExpandedPolicy] = useState<"privacy" | "terms" | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">(() => loadStoredTheme());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -122,19 +134,7 @@ export default function PassgenPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [showConfig]);
 
-  const updateConfig = useCallback((newConfig: PasswordConfig) => {
-    setConfigState(newConfig);
-    setValidationError(validateConfig(newConfig));
-    localStorage.setItem("passgen-config", JSON.stringify(newConfig));
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === "light" ? "dark" : "light";
-      localStorage.setItem("passgen-theme", next);
-      return next;
-    });
-  }, []);
+  const toggleTheme = () => writeStored(THEME_KEY, theme === "light" ? "dark" : "light");
 
   const handleGenerate = () => {
     if (validationError) { setShowInvalidConfig(true); return; }
