@@ -12,6 +12,8 @@ DOT_SERVICE="passgen.service"
 DEPLOY_DIR="${INSTALL_DIR}/deploy"
 SERVICE_SOURCE="${DEPLOY_DIR}/${DOT_SERVICE}"
 SYSTEMD_SERVICE="/etc/systemd/system/${DOT_SERVICE}"
+# Present while a deploy is unfinished, so a re-run retries it. Lives in .git to stay untracked.
+PENDING_MARKER="${INSTALL_DIR}/.git/passgen-deploy-pending"
 
 # Pre-run checks
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -32,6 +34,8 @@ COMMIT_REMOTE=$(git rev-parse origin/main)
 if [ "${COMMIT_LOCAL}" = "${COMMIT_REMOTE}" ]; then
     if [ "${FORCE}" = "true" ]; then
         echo "No updates, already at ${COMMIT_LOCAL:0:7} (force mode, continuing)"
+    elif [ -f "$PENDING_MARKER" ]; then
+        echo "Previous deploy did not finish, retrying ${COMMIT_LOCAL:0:7}"
     else
         echo "No updates, already at ${COMMIT_LOCAL:0:7}"
         cd "$RUNDIR"
@@ -41,6 +45,7 @@ fi
 
 # Pull update and rebuild site
 echo "=== Update available: ${COMMIT_LOCAL:0:7} → ${COMMIT_REMOTE:0:7}"
+touch "$PENDING_MARKER"
 git pull origin main
 echo
 
@@ -65,6 +70,7 @@ if [ "${RESTART_FAILED}" = "true" ]; then
     EXITVALUE=1
 else
     EXITVALUE=0
+    rm -f "$PENDING_MARKER"
     sleep 5 # Give the server a moment to fully start before status output
     echo "=== Service Restart Completed:"
 fi
