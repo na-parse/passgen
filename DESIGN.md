@@ -250,7 +250,7 @@ bun run lint
 The repo includes a Bun-based deployment path:
 
 - [`deploy/passgen.service`](./deploy/passgen.service) runs the app under systemd on port `3012`
-- [`deploy/update.sh`](./deploy/update.sh) fetches `origin/main`, rebuilds, and restarts the service
+- [`deploy/update.sh`](./deploy/update.sh) fetches `origin/main`, rebuilds, and restarts the service; a re-run retries a deploy whose build or restart failed
 - [`scripts/update-fonts.sh`](./scripts/update-fonts.sh) refreshes vendored font files and runs a build verification pass
 
 The deployment target assumes a working tree at `/var/www/passgen` and a `www-data` service user.
